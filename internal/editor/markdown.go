@@ -1,8 +1,10 @@
 package editor
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
+	"text/template"
 
 	"github.com/t3yamoto/gt/internal/client"
 	"gopkg.in/yaml.v3"
@@ -22,33 +24,52 @@ type TaskMarkdown struct {
 	Body        string // Notes content
 }
 
+// templateData holds data for the markdown template
+type templateData struct {
+	Title    string
+	Due      string
+	TaskList string
+	Done     bool
+	Notes    string
+}
+
+var taskTemplate = template.Must(template.New("task").Parse(`---
+title: {{.Title}}
+due: {{.Due}}
+tasklist: {{.TaskList}}
+done: {{.Done}}
+---
+
+{{.Notes}}`))
+
 // GenerateMarkdown creates a markdown document from a task
 func GenerateMarkdown(task *client.Task, taskListName string) string {
-	var sb strings.Builder
+	data := templateData{
+		Title:    task.Title,
+		Due:      task.Due,
+		TaskList: taskListName,
+		Done:     task.Status == "completed",
+		Notes:    task.Notes,
+	}
 
-	sb.WriteString("---\n")
-	sb.WriteString(fmt.Sprintf("title: %s\n", task.Title))
-	sb.WriteString(fmt.Sprintf("due: %s\n", task.Due))
-	sb.WriteString(fmt.Sprintf("tasklist: %s\n", taskListName))
-	sb.WriteString(fmt.Sprintf("done: %t\n", task.Status == "completed"))
-	sb.WriteString("---\n\n")
-	sb.WriteString(task.Notes)
-
-	return sb.String()
+	var buf bytes.Buffer
+	taskTemplate.Execute(&buf, data)
+	return buf.String()
 }
 
 // GenerateEmptyMarkdown creates an empty markdown template
 func GenerateEmptyMarkdown(taskListName string) string {
-	var sb strings.Builder
+	data := templateData{
+		Title:    "",
+		Due:      "",
+		TaskList: taskListName,
+		Done:     false,
+		Notes:    "",
+	}
 
-	sb.WriteString("---\n")
-	sb.WriteString("title: \n")
-	sb.WriteString("due: \n")
-	sb.WriteString(fmt.Sprintf("tasklist: %s\n", taskListName))
-	sb.WriteString("done: false\n")
-	sb.WriteString("---\n\n")
-
-	return sb.String()
+	var buf bytes.Buffer
+	taskTemplate.Execute(&buf, data)
+	return buf.String()
 }
 
 // ParseMarkdown parses a markdown document into TaskMarkdown
