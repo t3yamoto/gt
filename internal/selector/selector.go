@@ -33,8 +33,9 @@ func SelectTask(tasks []*client.Task) (*client.Task, error) {
 	}
 
 	// Run fzf with shell
+	// Use bat for syntax highlighting if available, otherwise fall back to base64 -d
 	cmd := exec.Command("sh", "-c",
-		`fzf --delimiter='\t' --with-nth=2 --preview='echo {3} | base64 -d' --preview-window=right:50%:wrap`,
+		`fzf --delimiter='\t' --with-nth=2 --preview='echo {3} | base64 -d | bat -l md --style=plain --color=always 2>/dev/null || echo {3} | base64 -d' --preview-window=right:50%:wrap`,
 	)
 
 	cmd.Stdin = strings.NewReader(input.String())
