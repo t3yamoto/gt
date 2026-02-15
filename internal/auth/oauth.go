@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -22,8 +23,7 @@ const (
 	tokenFile       = "token.json"
 )
 
-// GetConfigDir returns the path to the config directory
-func GetConfigDir() (string, error) {
+func getConfigDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get home directory: %w", err)
@@ -31,27 +31,24 @@ func GetConfigDir() (string, error) {
 	return filepath.Join(home, configDir), nil
 }
 
-// GetCredentialsPath returns the path to the credentials file
-func GetCredentialsPath() (string, error) {
-	dir, err := GetConfigDir()
+func getCredentialsPath() (string, error) {
+	dir, err := getConfigDir()
 	if err != nil {
 		return "", err
 	}
 	return filepath.Join(dir, credentialsFile), nil
 }
 
-// GetTokenPath returns the path to the token file
-func GetTokenPath() (string, error) {
-	dir, err := GetConfigDir()
+func getTokenPath() (string, error) {
+	dir, err := getConfigDir()
 	if err != nil {
 		return "", err
 	}
 	return filepath.Join(dir, tokenFile), nil
 }
 
-// LoadCredentials loads OAuth credentials from the config file
-func LoadCredentials() (*oauth2.Config, error) {
-	path, err := GetCredentialsPath()
+func loadCredentials() (*oauth2.Config, error) {
+	path, err := getCredentialsPath()
 	if err != nil {
 		return nil, err
 	}
@@ -69,9 +66,8 @@ func LoadCredentials() (*oauth2.Config, error) {
 	return config, nil
 }
 
-// LoadToken loads a saved token from the token file
-func LoadToken() (*oauth2.Token, error) {
-	path, err := GetTokenPath()
+func loadToken() (*oauth2.Token, error) {
+	path, err := getTokenPath()
 	if err != nil {
 		return nil, err
 	}
@@ -90,9 +86,8 @@ func LoadToken() (*oauth2.Token, error) {
 	return &token, nil
 }
 
-// SaveToken saves a token to the token file
-func SaveToken(token *oauth2.Token) error {
-	dir, err := GetConfigDir()
+func saveToken(token *oauth2.Token) error {
+	dir, err := getConfigDir()
 	if err != nil {
 		return err
 	}
@@ -101,7 +96,7 @@ func SaveToken(token *oauth2.Token) error {
 		return fmt.Errorf("設定ディレクトリの作成に失敗しました: %w", err)
 	}
 
-	path, err := GetTokenPath()
+	path, err := getTokenPath()
 	if err != nil {
 		return err
 	}
@@ -115,51 +110,46 @@ func SaveToken(token *oauth2.Token) error {
 	return json.NewEncoder(f).Encode(token)
 }
 
-// DeleteToken deletes the saved token file
-func DeleteToken() error {
-	path, err := GetTokenPath()
-	if err != nil {
-		return err
-	}
-
-	if err := os.Remove(path); err != nil {
-		if os.IsNotExist(err) {
-			return nil // Already logged out
-		}
-		return fmt.Errorf("トークンの削除に失敗しました: %w", err)
-	}
-
-	return nil
-}
-
-// HasToken checks if a valid token exists
-func HasToken() bool {
-	_, err := LoadToken()
-	return err == nil
-}
-
-// GetClient returns an authenticated HTTP client
+// GetClient returns an authenticated HTTP client.
+// If no token exists or it's expired, it automatically triggers browser authentication.
 func GetClient(ctx context.Context) (*http.Client, error) {
-	config, err := LoadCredentials()
+	config, err := loadCredentials()
 	if err != nil {
 		return nil, err
 	}
 
-	token, err := LoadToken()
+	token, err := loadToken()
 	if err != nil {
-		return nil, fmt.Errorf("ログインが必要です。`gt login` を実行してください")
+		// No token, authenticate via browser
+		token, err = authenticateViaBrowser(ctx, config)
+		if err != nil {
+			return nil, err
+		}
+		if err := saveToken(token); err != nil {
+			return nil, err
+		}
+	} else if token.Expiry.Before(time.Now()) && token.RefreshToken != "" {
+		// Token expired, try to refresh
+		tokenSource := config.TokenSource(ctx, token)
+		newToken, err := tokenSource.Token()
+		if err != nil {
+			// Refresh failed, re-authenticate via browser
+			newToken, err = authenticateViaBrowser(ctx, config)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if err := saveToken(newToken); err != nil {
+			return nil, err
+		}
+		token = newToken
 	}
 
 	return config.Client(ctx, token), nil
 }
 
-// Authenticate performs OAuth authentication via browser
-func Authenticate(ctx context.Context) (*oauth2.Token, error) {
-	config, err := LoadCredentials()
-	if err != nil {
-		return nil, err
-	}
-
+// authenticateViaBrowser performs OAuth authentication via browser
+func authenticateViaBrowser(ctx context.Context, config *oauth2.Config) (*oauth2.Token, error) {
 	// Find an available port
 	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
@@ -176,8 +166,8 @@ func Authenticate(ctx context.Context) (*oauth2.Token, error) {
 	errCh := make(chan error)
 
 	// Start local server for callback
-	server := &http.Server{Addr: fmt.Sprintf("localhost:%d", port)}
-	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 		code := r.URL.Query().Get("code")
 		if code == "" {
 			errCh <- fmt.Errorf("認証コードを取得できませんでした")
@@ -187,6 +177,10 @@ func Authenticate(ctx context.Context) (*oauth2.Token, error) {
 		codeCh <- code
 		fmt.Fprintf(w, "<html><body><h1>認証成功!</h1><p>このウィンドウを閉じてください。</p></body></html>")
 	})
+	server := &http.Server{
+		Addr:    fmt.Sprintf("localhost:%d", port),
+		Handler: mux,
+	}
 
 	go func() {
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {

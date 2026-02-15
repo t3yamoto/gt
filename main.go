@@ -16,8 +16,6 @@ func main() {
 		Usage:   "Google Tasks CLI",
 		Version: version,
 		Commands: []*cli.Command{
-			command.LoginCommand(),
-			command.LogoutCommand(),
 			command.ListCommand(),
 			command.AddCommand(),
 			command.DoneCommand(),
