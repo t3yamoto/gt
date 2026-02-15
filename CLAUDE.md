@@ -11,8 +11,8 @@ Instructions for Claude Code and other AI assistants working on this project.
 - **Language**: Go
 - **CLI Framework**: urfave/cli v2
 - **Authentication**: OAuth 2.0 (browser-based flow)
-- **Interactive Selection**: go-fuzzyfinder
-- **Syntax Highlighting**: bat (for editor preview)
+- **Interactive Selection**: fzf (external command, required)
+- **Syntax Highlighting**: bat (optional, for preview)
 
 ## Architecture
 

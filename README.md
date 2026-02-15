@@ -12,6 +12,19 @@ A simple command-line interface for Google Tasks.
 - Interactive task selection with fuzzy finder
 - File-based caching for faster responses
 
+## Requirements
+
+- **fzf** - Required for interactive task selection
+- **bat** - Optional, for syntax highlighting in preview (falls back to plain text)
+
+```bash
+# macOS
+brew install fzf bat
+
+# Ubuntu/Debian
+sudo apt install fzf bat
+```
+
 ## Installation
 
 ```bash
