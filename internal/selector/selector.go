@@ -17,16 +17,7 @@ func SelectTask(tasks []*client.Task) (*client.Task, error) {
 	idx, err := fuzzyfinder.Find(
 		tasks,
 		func(i int) string {
-			t := tasks[i]
-			due := t.Due
-			if due == "" {
-				due = "----------"
-			}
-			status := "[ ]"
-			if t.Status == "completed" {
-				status = "[x]"
-			}
-			return fmt.Sprintf("%s  %s  %s", t.Title, due, status)
+			return tasks[i].Title
 		},
 		fuzzyfinder.WithPreviewWindow(func(i, w, h int) string {
 			if i == -1 {
@@ -51,6 +42,7 @@ func formatPreview(task *client.Task, width, height int) string {
 	var sb strings.Builder
 
 	sb.WriteString(fmt.Sprintf("Title: %s\n", task.Title))
+	sb.WriteString(fmt.Sprintf("List: %s\n", task.TaskListName))
 	sb.WriteString(fmt.Sprintf("ID: %s\n", client.ShortID(task.ID)))
 
 	if task.Due != "" {
