@@ -12,13 +12,14 @@ import (
 
 // Task represents a task with additional metadata
 type Task struct {
-	ID        string
-	Title     string
-	Notes     string
-	Due       string
-	Status    string
-	Completed string
-	TaskList  string
+	ID           string
+	Title        string
+	Notes        string
+	Due          string
+	Status       string
+	Completed    string
+	TaskListID   string
+	TaskListName string
 }
 
 // TaskList represents a task list
@@ -102,8 +103,31 @@ func (c *Client) GetTaskListName(ctx context.Context, id string) (string, error)
 	return tl.Title, nil
 }
 
+// ListAllTasks returns all incomplete tasks from all task lists
+func (c *Client) ListAllTasks(ctx context.Context) ([]*Task, error) {
+	lists, err := c.GetTaskLists(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var allTasks []*Task
+	for _, list := range lists {
+		tasks, err := c.listTasksFromList(ctx, list.ID, list.Title)
+		if err != nil {
+			return nil, err
+		}
+		allTasks = append(allTasks, tasks...)
+	}
+	return allTasks, nil
+}
+
 // ListTasks returns all incomplete tasks in the specified task list
 func (c *Client) ListTasks(ctx context.Context, taskListID string) ([]*Task, error) {
+	listName, _ := c.GetTaskListName(ctx, taskListID)
+	return c.listTasksFromList(ctx, taskListID, listName)
+}
+
+func (c *Client) listTasksFromList(ctx context.Context, taskListID, taskListName string) ([]*Task, error) {
 	resp, err := c.service.Tasks.List(taskListID).
 		ShowCompleted(false).
 		ShowHidden(false).
@@ -115,7 +139,7 @@ func (c *Client) ListTasks(ctx context.Context, taskListID string) ([]*Task, err
 
 	var tasksList []*Task
 	for _, t := range resp.Items {
-		tasksList = append(tasksList, convertTask(t, taskListID))
+		tasksList = append(tasksList, convertTask(t, taskListID, taskListName))
 	}
 	return tasksList, nil
 }
@@ -132,7 +156,8 @@ func (c *Client) GetTask(ctx context.Context, taskListID, taskID string) (*Task,
 	if err != nil {
 		return nil, fmt.Errorf("タスクの取得に失敗しました: %w", err)
 	}
-	return convertTask(t, taskListID), nil
+	listName, _ := c.GetTaskListName(ctx, taskListID)
+	return convertTask(t, taskListID, listName), nil
 }
 
 // CreateTask creates a new task
@@ -152,7 +177,8 @@ func (c *Client) CreateTask(ctx context.Context, taskListID string, task *Task) 
 	if err != nil {
 		return nil, fmt.Errorf("タスクの作成に失敗しました: %w", err)
 	}
-	return convertTask(t, taskListID), nil
+	listName, _ := c.GetTaskListName(ctx, taskListID)
+	return convertTask(t, taskListID, listName), nil
 }
 
 // UpdateTask updates an existing task
@@ -186,7 +212,8 @@ func (c *Client) UpdateTask(ctx context.Context, taskListID string, task *Task) 
 	if err != nil {
 		return nil, fmt.Errorf("タスクの更新に失敗しました: %w", err)
 	}
-	return convertTask(t, taskListID), nil
+	listName, _ := c.GetTaskListName(ctx, taskListID)
+	return convertTask(t, taskListID, listName), nil
 }
 
 // CompleteTask marks a task as completed
@@ -206,7 +233,8 @@ func (c *Client) CompleteTask(ctx context.Context, taskListID, taskID string) (*
 	if err != nil {
 		return nil, fmt.Errorf("タスクの完了に失敗しました: %w", err)
 	}
-	return convertTask(t, taskListID), nil
+	listName, _ := c.GetTaskListName(ctx, taskListID)
+	return convertTask(t, taskListID, listName), nil
 }
 
 // DeleteTask deletes a task
@@ -264,7 +292,7 @@ func ShortID(id string) string {
 	return id[:8]
 }
 
-func convertTask(t *tasks.Task, taskListID string) *Task {
+func convertTask(t *tasks.Task, taskListID, taskListName string) *Task {
 	due := ""
 	if t.Due != "" {
 		// Extract date part only
@@ -279,12 +307,13 @@ func convertTask(t *tasks.Task, taskListID string) *Task {
 	}
 
 	return &Task{
-		ID:        t.Id,
-		Title:     t.Title,
-		Notes:     t.Notes,
-		Due:       due,
-		Status:    t.Status,
-		Completed: completed,
-		TaskList:  taskListID,
+		ID:           t.Id,
+		Title:        t.Title,
+		Notes:        t.Notes,
+		Due:          due,
+		Status:       t.Status,
+		Completed:    completed,
+		TaskListID:   taskListID,
+		TaskListName: taskListName,
 	}
 }

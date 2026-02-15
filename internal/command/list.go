@@ -16,8 +16,7 @@ func ListCommand() *cli.Command {
 			&cli.StringFlag{
 				Name:    "tasklist",
 				Aliases: []string{"l"},
-				Value:   "@default",
-				Usage:   "対象タスクリスト名",
+				Usage:   "対象タスクリスト名（省略時は全リスト）",
 			},
 			&cli.BoolFlag{
 				Name:  "json",
@@ -32,16 +31,24 @@ func ListCommand() *cli.Command {
 				return err
 			}
 
-			// Resolve task list name to ID
-			taskListID, err := taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
-			if err != nil {
-				return err
-			}
+			var tasks []*client.Task
 
-			// Get tasks
-			tasks, err := taskClient.ListTasks(ctx, taskListID)
-			if err != nil {
-				return err
+			if c.String("tasklist") != "" {
+				// Specific task list
+				taskListID, err := taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
+				if err != nil {
+					return err
+				}
+				tasks, err = taskClient.ListTasks(ctx, taskListID)
+				if err != nil {
+					return err
+				}
+			} else {
+				// All task lists
+				tasks, err = taskClient.ListAllTasks(ctx)
+				if err != nil {
+					return err
+				}
 			}
 
 			// Output

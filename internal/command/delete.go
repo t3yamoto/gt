@@ -17,8 +17,7 @@ func DeleteCommand() *cli.Command {
 			&cli.StringFlag{
 				Name:    "tasklist",
 				Aliases: []string{"l"},
-				Value:   "@default",
-				Usage:   "対象タスクリスト名",
+				Usage:   "対象タスクリスト名（省略時は全リスト）",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -29,18 +28,21 @@ func DeleteCommand() *cli.Command {
 				return err
 			}
 
-			// Resolve task list name to ID
-			taskListID, err := taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
-			if err != nil {
-				return err
-			}
-
 			var taskID string
 			var taskTitle string
+			var taskListID string
 
 			if c.Args().Len() > 0 {
 				// Direct mode: use provided task ID
 				taskID = c.Args().First()
+				if c.String("tasklist") != "" {
+					taskListID, err = taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
+					if err != nil {
+						return err
+					}
+				} else {
+					taskListID = "@default"
+				}
 				// Get task to display title
 				task, err := taskClient.GetTask(ctx, taskListID, taskID)
 				if err != nil {
@@ -50,7 +52,16 @@ func DeleteCommand() *cli.Command {
 				taskID = task.ID // Use full ID
 			} else {
 				// Interactive mode
-				tasks, err := taskClient.ListTasks(ctx, taskListID)
+				var tasks []*client.Task
+				if c.String("tasklist") != "" {
+					taskListID, err = taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
+					if err != nil {
+						return err
+					}
+					tasks, err = taskClient.ListTasks(ctx, taskListID)
+				} else {
+					tasks, err = taskClient.ListAllTasks(ctx)
+				}
 				if err != nil {
 					return err
 				}
@@ -61,6 +72,7 @@ func DeleteCommand() *cli.Command {
 				}
 				taskID = selected.ID
 				taskTitle = selected.Title
+				taskListID = selected.TaskListID
 			}
 
 			// Delete the task

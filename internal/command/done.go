@@ -17,8 +17,7 @@ func DoneCommand() *cli.Command {
 			&cli.StringFlag{
 				Name:    "tasklist",
 				Aliases: []string{"l"},
-				Value:   "@default",
-				Usage:   "対象タスクリスト名",
+				Usage:   "対象タスクリスト名（省略時は全リスト）",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -29,20 +28,32 @@ func DoneCommand() *cli.Command {
 				return err
 			}
 
-			// Resolve task list name to ID
-			taskListID, err := taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
-			if err != nil {
-				return err
-			}
-
 			var taskID string
+			var taskListID string
 
 			if c.Args().Len() > 0 {
 				// Direct mode: use provided task ID
 				taskID = c.Args().First()
+				if c.String("tasklist") != "" {
+					taskListID, err = taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
+					if err != nil {
+						return err
+					}
+				} else {
+					taskListID = "@default"
+				}
 			} else {
 				// Interactive mode
-				tasks, err := taskClient.ListTasks(ctx, taskListID)
+				var tasks []*client.Task
+				if c.String("tasklist") != "" {
+					taskListID, err = taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
+					if err != nil {
+						return err
+					}
+					tasks, err = taskClient.ListTasks(ctx, taskListID)
+				} else {
+					tasks, err = taskClient.ListAllTasks(ctx)
+				}
 				if err != nil {
 					return err
 				}
@@ -52,6 +63,7 @@ func DoneCommand() *cli.Command {
 					return err
 				}
 				taskID = selected.ID
+				taskListID = selected.TaskListID
 			}
 
 			// Complete the task

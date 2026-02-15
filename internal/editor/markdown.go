@@ -106,11 +106,11 @@ func (tm *TaskMarkdown) ToTask() *client.Task {
 	}
 
 	return &client.Task{
-		Title:    tm.FrontMatter.Title,
-		Notes:    tm.Body,
-		Due:      tm.FrontMatter.Due,
-		Status:   status,
-		TaskList: tm.FrontMatter.TaskList,
+		Title:        tm.FrontMatter.Title,
+		Notes:        tm.Body,
+		Due:          tm.FrontMatter.Due,
+		Status:       status,
+		TaskListName: tm.FrontMatter.TaskList,
 	}
 }
 

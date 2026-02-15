@@ -18,37 +18,47 @@ func EditCommand() *cli.Command {
 			&cli.StringFlag{
 				Name:    "tasklist",
 				Aliases: []string{"l"},
-				Value:   "@default",
-				Usage:   "対象タスクリスト名",
+				Usage:   "対象タスクリスト名（省略時は全リスト）",
 			},
 		},
 		Action: func(c *cli.Context) error {
 			ctx := c.Context
-			taskListName := c.String("tasklist")
 
 			taskClient, err := client.NewClient(ctx)
 			if err != nil {
 				return err
 			}
 
-			// Resolve task list name to ID
-			taskListID, err := taskClient.ResolveTaskListID(ctx, taskListName)
-			if err != nil {
-				return err
-			}
-
 			var task *client.Task
+			var taskListID string
 
 			if c.Args().Len() > 0 {
 				// Direct mode: get task by ID
 				taskID := c.Args().First()
+				if c.String("tasklist") != "" {
+					taskListID, err = taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
+					if err != nil {
+						return err
+					}
+				} else {
+					taskListID = "@default"
+				}
 				task, err = taskClient.GetTask(ctx, taskListID, taskID)
 				if err != nil {
 					return err
 				}
 			} else {
 				// Interactive mode
-				tasks, err := taskClient.ListTasks(ctx, taskListID)
+				var tasks []*client.Task
+				if c.String("tasklist") != "" {
+					taskListID, err = taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
+					if err != nil {
+						return err
+					}
+					tasks, err = taskClient.ListTasks(ctx, taskListID)
+				} else {
+					tasks, err = taskClient.ListAllTasks(ctx)
+				}
 				if err != nil {
 					return err
 				}
@@ -57,13 +67,11 @@ func EditCommand() *cli.Command {
 				if err != nil {
 					return err
 				}
+				taskListID = task.TaskListID
 			}
 
-			// Get task list display name
-			displayName, _ := taskClient.GetTaskListName(ctx, taskListID)
-
 			// Open in editor
-			initialContent := editor.GenerateMarkdown(task, displayName)
+			initialContent := editor.GenerateMarkdown(task, task.TaskListName)
 			editedContent, err := editor.Open(initialContent)
 			if err != nil {
 				return err
@@ -81,7 +89,7 @@ func EditCommand() *cli.Command {
 
 			// Check if task list was changed
 			editorTaskList := parsed.GetTaskListName()
-			if editorTaskList != taskListName && editorTaskList != "@default" && editorTaskList != displayName {
+			if editorTaskList != "@default" && editorTaskList != task.TaskListName {
 				newTaskListID, err := taskClient.ResolveTaskListID(ctx, editorTaskList)
 				if err != nil {
 					return err
