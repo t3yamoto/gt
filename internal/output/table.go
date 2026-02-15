@@ -21,16 +21,14 @@ func PrintTasksTable(w io.Writer, tasks []*client.Task) {
 	titleWidth := 24
 	listWidth := 12
 	dueWidth := 10
-	statusWidth := 6
 
 	// Print header
-	fmt.Fprintf(w, "%s  %s  %s  %s  %s\n",
+	fmt.Fprintf(w, "%s  %s  %s  %s\n",
 		padRight("ID", idWidth),
 		padRight("TITLE", titleWidth),
 		padRight("LIST", listWidth),
-		padRight("DUE", dueWidth),
-		"STATUS")
-	fmt.Fprintln(w, strings.Repeat("-", idWidth+titleWidth+listWidth+dueWidth+statusWidth+10))
+		"DUE")
+	fmt.Fprintln(w, strings.Repeat("-", idWidth+titleWidth+listWidth+dueWidth+6))
 
 	// Print tasks
 	for _, t := range tasks {
@@ -40,17 +38,12 @@ func PrintTasksTable(w io.Writer, tasks []*client.Task) {
 		if due == "" {
 			due = "-"
 		}
-		status := "[ ]"
-		if t.Status == "completed" {
-			status = "[x]"
-		}
 
-		fmt.Fprintf(w, "%s  %s  %s  %s  %s\n",
+		fmt.Fprintf(w, "%s  %s  %s  %s\n",
 			padRight(client.ShortID(t.ID), idWidth),
 			padRight(title, titleWidth),
 			padRight(list, listWidth),
-			padRight(due, dueWidth),
-			status)
+			due)
 	}
 }
 
