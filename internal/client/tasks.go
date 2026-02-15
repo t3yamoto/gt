@@ -144,7 +144,7 @@ func (c *Client) listTasksFromList(ctx context.Context, taskListID, taskListName
 	return tasksList, nil
 }
 
-// GetTask returns a task by ID
+// GetTask returns a task by ID from a specific task list
 func (c *Client) GetTask(ctx context.Context, taskListID, taskID string) (*Task, error) {
 	// Try to resolve short ID
 	fullID, err := c.ResolveTaskID(ctx, taskListID, taskID)
@@ -158,6 +158,23 @@ func (c *Client) GetTask(ctx context.Context, taskListID, taskID string) (*Task,
 	}
 	listName, _ := c.GetTaskListName(ctx, taskListID)
 	return convertTask(t, taskListID, listName), nil
+}
+
+// FindTask searches for a task by ID across all task lists
+func (c *Client) FindTask(ctx context.Context, taskID string) (*Task, error) {
+	lists, err := c.GetTaskLists(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, list := range lists {
+		task, err := c.GetTask(ctx, list.ID, taskID)
+		if err == nil {
+			return task, nil
+		}
+	}
+
+	return nil, fmt.Errorf("タスク '%s' が見つかりません", taskID)
 }
 
 // CreateTask creates a new task

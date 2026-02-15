@@ -40,7 +40,13 @@ func DoneCommand() *cli.Command {
 						return err
 					}
 				} else {
-					taskListID = "@default"
+					// Search across all task lists
+					task, err := taskClient.FindTask(ctx, taskID)
+					if err != nil {
+						return err
+					}
+					taskID = task.ID
+					taskListID = task.TaskListID
 				}
 			} else {
 				// Interactive mode

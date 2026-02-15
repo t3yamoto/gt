@@ -40,12 +40,17 @@ func EditCommand() *cli.Command {
 					if err != nil {
 						return err
 					}
+					task, err = taskClient.GetTask(ctx, taskListID, taskID)
+					if err != nil {
+						return err
+					}
 				} else {
-					taskListID = "@default"
-				}
-				task, err = taskClient.GetTask(ctx, taskListID, taskID)
-				if err != nil {
-					return err
+					// Search across all task lists
+					task, err = taskClient.FindTask(ctx, taskID)
+					if err != nil {
+						return err
+					}
+					taskListID = task.TaskListID
 				}
 			} else {
 				// Interactive mode

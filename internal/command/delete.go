@@ -28,28 +28,29 @@ func DeleteCommand() *cli.Command {
 				return err
 			}
 
-			var taskID string
-			var taskTitle string
+			var task *client.Task
 			var taskListID string
 
 			if c.Args().Len() > 0 {
 				// Direct mode: use provided task ID
-				taskID = c.Args().First()
+				taskID := c.Args().First()
 				if c.String("tasklist") != "" {
 					taskListID, err = taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
 					if err != nil {
 						return err
 					}
+					task, err = taskClient.GetTask(ctx, taskListID, taskID)
+					if err != nil {
+						return err
+					}
 				} else {
-					taskListID = "@default"
+					// Search across all task lists
+					task, err = taskClient.FindTask(ctx, taskID)
+					if err != nil {
+						return err
+					}
+					taskListID = task.TaskListID
 				}
-				// Get task to display title
-				task, err := taskClient.GetTask(ctx, taskListID, taskID)
-				if err != nil {
-					return err
-				}
-				taskTitle = task.Title
-				taskID = task.ID // Use full ID
 			} else {
 				// Interactive mode
 				var tasks []*client.Task
@@ -66,21 +67,19 @@ func DeleteCommand() *cli.Command {
 					return err
 				}
 
-				selected, err := selector.SelectTask(tasks)
+				task, err = selector.SelectTask(tasks)
 				if err != nil {
 					return err
 				}
-				taskID = selected.ID
-				taskTitle = selected.Title
-				taskListID = selected.TaskListID
+				taskListID = task.TaskListID
 			}
 
 			// Delete the task
-			if err := taskClient.DeleteTask(ctx, taskListID, taskID); err != nil {
+			if err := taskClient.DeleteTask(ctx, taskListID, task.ID); err != nil {
 				return err
 			}
 
-			fmt.Printf("タスクを削除しました: %s\n", taskTitle)
+			fmt.Printf("タスクを削除しました: %s\n", task.Title)
 			return nil
 		},
 	}
