@@ -3,6 +3,7 @@ package output
 import (
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/mattn/go-runewidth"
@@ -15,6 +16,22 @@ func PrintTasksTable(w io.Writer, tasks []*client.Task) {
 		fmt.Fprintln(w, "No tasks found.")
 		return
 	}
+
+	// Sort by DUE (empty last), then by LIST
+	sort.Slice(tasks, func(i, j int) bool {
+		// DUE comparison (empty dates come last)
+		if tasks[i].Due != tasks[j].Due {
+			if tasks[i].Due == "" {
+				return false
+			}
+			if tasks[j].Due == "" {
+				return true
+			}
+			return tasks[i].Due < tasks[j].Due
+		}
+		// LIST comparison
+		return tasks[i].TaskListName < tasks[j].TaskListName
+	})
 
 	// Calculate column widths
 	idWidth := 8
