@@ -12,7 +12,7 @@ import (
 // PrintTasksTable prints tasks in a table format
 func PrintTasksTable(w io.Writer, tasks []*client.Task) {
 	if len(tasks) == 0 {
-		fmt.Fprintln(w, "タスクがありません。")
+		fmt.Fprintln(w, "No tasks found.")
 		return
 	}
 

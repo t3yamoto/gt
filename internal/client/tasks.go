@@ -42,7 +42,7 @@ func NewClient(ctx context.Context) (*Client, error) {
 
 	service, err := tasks.NewService(ctx, option.WithHTTPClient(httpClient))
 	if err != nil {
-		return nil, fmt.Errorf("Tasks サービスの初期化に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to initialize Tasks service: %w", err)
 	}
 
 	return &Client{service: service}, nil
@@ -52,7 +52,7 @@ func NewClient(ctx context.Context) (*Client, error) {
 func (c *Client) GetTaskLists(ctx context.Context) ([]*TaskList, error) {
 	resp, err := c.service.Tasklists.List().Context(ctx).Do()
 	if err != nil {
-		return nil, fmt.Errorf("タスクリストの取得に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to get task lists: %w", err)
 	}
 
 	var lists []*TaskList
@@ -83,7 +83,7 @@ func (c *Client) ResolveTaskListID(ctx context.Context, name string) (string, er
 		}
 	}
 
-	return "", fmt.Errorf("タスクリスト '%s' が見つかりません", name)
+	return "", fmt.Errorf("task list '%s' not found", name)
 }
 
 // GetTaskListName returns the task list name for display
@@ -98,7 +98,7 @@ func (c *Client) GetTaskListName(ctx context.Context, id string) (string, error)
 
 	tl, err := c.service.Tasklists.Get(id).Context(ctx).Do()
 	if err != nil {
-		return "", fmt.Errorf("タスクリストの取得に失敗しました: %w", err)
+		return "", fmt.Errorf("failed to get task list: %w", err)
 	}
 	return tl.Title, nil
 }
@@ -134,7 +134,7 @@ func (c *Client) listTasksFromList(ctx context.Context, taskListID, taskListName
 		Context(ctx).
 		Do()
 	if err != nil {
-		return nil, fmt.Errorf("タスクの取得に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to get tasks: %w", err)
 	}
 
 	var tasksList []*Task
@@ -154,7 +154,7 @@ func (c *Client) GetTask(ctx context.Context, taskListID, taskID string) (*Task,
 
 	t, err := c.service.Tasks.Get(taskListID, fullID).Context(ctx).Do()
 	if err != nil {
-		return nil, fmt.Errorf("タスクの取得に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to get task: %w", err)
 	}
 	listName, _ := c.GetTaskListName(ctx, taskListID)
 	return convertTask(t, taskListID, listName), nil
@@ -174,7 +174,7 @@ func (c *Client) FindTask(ctx context.Context, taskID string) (*Task, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("タスク '%s' が見つかりません", taskID)
+	return nil, fmt.Errorf("task '%s' not found", taskID)
 }
 
 // CreateTask creates a new task
@@ -192,7 +192,7 @@ func (c *Client) CreateTask(ctx context.Context, taskListID string, task *Task) 
 
 	t, err := c.service.Tasks.Insert(taskListID, newTask).Context(ctx).Do()
 	if err != nil {
-		return nil, fmt.Errorf("タスクの作成に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to create task: %w", err)
 	}
 	listName, _ := c.GetTaskListName(ctx, taskListID)
 	return convertTask(t, taskListID, listName), nil
@@ -208,7 +208,7 @@ func (c *Client) UpdateTask(ctx context.Context, taskListID string, task *Task) 
 	// Get existing task first
 	existing, err := c.service.Tasks.Get(taskListID, fullID).Context(ctx).Do()
 	if err != nil {
-		return nil, fmt.Errorf("タスクの取得に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to get task: %w", err)
 	}
 
 	// Update fields
@@ -227,7 +227,7 @@ func (c *Client) UpdateTask(ctx context.Context, taskListID string, task *Task) 
 
 	t, err := c.service.Tasks.Update(taskListID, fullID, existing).Context(ctx).Do()
 	if err != nil {
-		return nil, fmt.Errorf("タスクの更新に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to update task: %w", err)
 	}
 	listName, _ := c.GetTaskListName(ctx, taskListID)
 	return convertTask(t, taskListID, listName), nil
@@ -242,13 +242,13 @@ func (c *Client) CompleteTask(ctx context.Context, taskListID, taskID string) (*
 
 	existing, err := c.service.Tasks.Get(taskListID, fullID).Context(ctx).Do()
 	if err != nil {
-		return nil, fmt.Errorf("タスクの取得に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to get task: %w", err)
 	}
 
 	existing.Status = "completed"
 	t, err := c.service.Tasks.Update(taskListID, fullID, existing).Context(ctx).Do()
 	if err != nil {
-		return nil, fmt.Errorf("タスクの完了に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to complete task: %w", err)
 	}
 	listName, _ := c.GetTaskListName(ctx, taskListID)
 	return convertTask(t, taskListID, listName), nil
@@ -262,7 +262,7 @@ func (c *Client) DeleteTask(ctx context.Context, taskListID, taskID string) erro
 	}
 
 	if err := c.service.Tasks.Delete(taskListID, fullID).Context(ctx).Do(); err != nil {
-		return fmt.Errorf("タスクの削除に失敗しました: %w", err)
+		return fmt.Errorf("failed to delete task: %w", err)
 	}
 	return nil
 }
@@ -282,7 +282,7 @@ func (c *Client) ResolveTaskID(ctx context.Context, taskListID, shortID string) 
 		Context(ctx).
 		Do()
 	if err != nil {
-		return "", fmt.Errorf("タスクの検索に失敗しました: %w", err)
+		return "", fmt.Errorf("failed to search tasks: %w", err)
 	}
 
 	var matches []string
@@ -293,10 +293,10 @@ func (c *Client) ResolveTaskID(ctx context.Context, taskListID, shortID string) 
 	}
 
 	if len(matches) == 0 {
-		return "", fmt.Errorf("タスク '%s' が見つかりません", shortID)
+		return "", fmt.Errorf("task '%s' not found", shortID)
 	}
 	if len(matches) > 1 {
-		return "", fmt.Errorf("タスクID '%s' が複数のタスクにマッチします。より長いIDを指定してください", shortID)
+		return "", fmt.Errorf("task ID '%s' matches multiple tasks, please use a longer ID", shortID)
 	}
 	return matches[0], nil
 }

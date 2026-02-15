@@ -19,7 +19,7 @@ func Open(content string) (string, error) {
 	tmpDir := os.TempDir()
 	tmpFile, err := os.CreateTemp(tmpDir, "gt-*.md")
 	if err != nil {
-		return "", fmt.Errorf("一時ファイルの作成に失敗しました: %w", err)
+		return "", fmt.Errorf("failed to create temp file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
 	defer os.Remove(tmpPath)
@@ -27,7 +27,7 @@ func Open(content string) (string, error) {
 	// Write initial content
 	if _, err := tmpFile.WriteString(content); err != nil {
 		tmpFile.Close()
-		return "", fmt.Errorf("一時ファイルへの書き込みに失敗しました: %w", err)
+		return "", fmt.Errorf("failed to write to temp file: %w", err)
 	}
 	tmpFile.Close()
 
@@ -38,13 +38,13 @@ func Open(content string) (string, error) {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("エディタの起動に失敗しました: %w", err)
+		return "", fmt.Errorf("failed to start editor: %w", err)
 	}
 
 	// Read edited content
 	edited, err := os.ReadFile(tmpPath)
 	if err != nil {
-		return "", fmt.Errorf("編集内容の読み込みに失敗しました: %w", err)
+		return "", fmt.Errorf("failed to read edited content: %w", err)
 	}
 
 	return string(edited), nil

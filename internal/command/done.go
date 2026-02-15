@@ -11,13 +11,13 @@ import (
 func DoneCommand() *cli.Command {
 	return &cli.Command{
 		Name:      "done",
-		Usage:     "タスクを完了にする（引数なしでインタラクティブ選択）",
+		Usage:     "Mark a task as done (interactive selection if no argument)",
 		ArgsUsage: "[task-id]",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "tasklist",
 				Aliases: []string{"l"},
-				Usage:   "対象タスクリスト名（省略時は全リスト）",
+				Usage:   "Target task list name (default: all lists)",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -78,7 +78,7 @@ func DoneCommand() *cli.Command {
 				return err
 			}
 
-			fmt.Printf("タスクを完了しました: %s\n", completed.Title)
+			fmt.Printf("Task completed: %s\n", completed.Title)
 			return nil
 		},
 	}

@@ -11,16 +11,16 @@ import (
 func ListCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "list",
-		Usage: "タスク一覧を表示",
+		Usage: "List tasks",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "tasklist",
 				Aliases: []string{"l"},
-				Usage:   "対象タスクリスト名（省略時は全リスト）",
+				Usage:   "Target task list name (default: all lists)",
 			},
 			&cli.BoolFlag{
 				Name:  "json",
-				Usage: "JSON形式で出力",
+				Usage: "Output in JSON format",
 			},
 		},
 		Action: func(c *cli.Context) error {

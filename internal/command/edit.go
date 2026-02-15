@@ -12,13 +12,13 @@ import (
 func EditCommand() *cli.Command {
 	return &cli.Command{
 		Name:      "edit",
-		Usage:     "タスクを編集（引数なしでインタラクティブ選択）",
+		Usage:     "Edit a task (interactive selection if no argument)",
 		ArgsUsage: "[task-id]",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "tasklist",
 				Aliases: []string{"l"},
-				Usage:   "対象タスクリスト名（省略時は全リスト）",
+				Usage:   "Target task list name (default: all lists)",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -101,13 +101,13 @@ func EditCommand() *cli.Command {
 				}
 				// Need to delete from old list and create in new list
 				if err := taskClient.DeleteTask(ctx, taskListID, task.ID); err != nil {
-					return fmt.Errorf("タスクの移動に失敗しました: %w", err)
+					return fmt.Errorf("failed to move task: %w", err)
 				}
 				created, err := taskClient.CreateTask(ctx, newTaskListID, updatedTask)
 				if err != nil {
-					return fmt.Errorf("タスクの移動に失敗しました: %w", err)
+					return fmt.Errorf("failed to move task: %w", err)
 				}
-				fmt.Printf("タスクを更新しました: %s (新しいID: %s)\n", created.Title, client.ShortID(created.ID))
+				fmt.Printf("Task updated: %s (new ID: %s)\n", created.Title, client.ShortID(created.ID))
 				return nil
 			}
 
@@ -117,7 +117,7 @@ func EditCommand() *cli.Command {
 				return err
 			}
 
-			fmt.Printf("タスクを更新しました: %s\n", updated.Title)
+			fmt.Printf("Task updated: %s\n", updated.Title)
 			return nil
 		},
 	}

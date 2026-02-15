@@ -15,12 +15,12 @@ import (
 // SelectTask presents an interactive task selector using fzf and returns the selected task
 func SelectTask(tasks []*client.Task) (*client.Task, error) {
 	if len(tasks) == 0 {
-		return nil, fmt.Errorf("タスクがありません")
+		return nil, fmt.Errorf("no tasks found")
 	}
 
 	// Check if fzf is available
 	if _, err := exec.LookPath("fzf"); err != nil {
-		return nil, fmt.Errorf("fzf がインストールされていません")
+		return nil, fmt.Errorf("fzf is not installed")
 	}
 
 	// Build input for fzf
@@ -47,30 +47,30 @@ func SelectTask(tasks []*client.Task) (*client.Task, error) {
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			if exitErr.ExitCode() == 130 || exitErr.ExitCode() == 1 {
-				return nil, fmt.Errorf("キャンセルされました")
+				return nil, fmt.Errorf("cancelled")
 			}
 		}
-		return nil, fmt.Errorf("fzf の実行に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to run fzf: %w", err)
 	}
 
 	// Parse selected line
 	selected := strings.TrimSpace(string(output))
 	if selected == "" {
-		return nil, fmt.Errorf("キャンセルされました")
+		return nil, fmt.Errorf("cancelled")
 	}
 
 	parts := strings.Split(selected, "\t")
 	if len(parts) < 1 {
-		return nil, fmt.Errorf("選択の解析に失敗しました")
+		return nil, fmt.Errorf("failed to parse selection")
 	}
 
 	index, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return nil, fmt.Errorf("選択の解析に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to parse selection: %w", err)
 	}
 
 	if index < 0 || index >= len(tasks) {
-		return nil, fmt.Errorf("無効な選択です")
+		return nil, fmt.Errorf("invalid selection")
 	}
 
 	return tasks[index], nil

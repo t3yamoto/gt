@@ -55,12 +55,12 @@ func loadCredentials() (*oauth2.Config, error) {
 
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("credentials.json が見つかりません: %s\nGoogle Cloud Console からダウンロードして配置してください", path)
+		return nil, fmt.Errorf("credentials.json not found: %s\nPlease download it from Google Cloud Console", path)
 	}
 
 	config, err := google.ConfigFromJSON(b, tasks.TasksScope)
 	if err != nil {
-		return nil, fmt.Errorf("credentials.json のパースに失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to parse credentials.json: %w", err)
 	}
 
 	return config, nil
@@ -93,7 +93,7 @@ func saveToken(token *oauth2.Token) error {
 	}
 
 	if err := os.MkdirAll(dir, 0700); err != nil {
-		return fmt.Errorf("設定ディレクトリの作成に失敗しました: %w", err)
+		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
 	path, err := getTokenPath()
@@ -103,7 +103,7 @@ func saveToken(token *oauth2.Token) error {
 
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return fmt.Errorf("トークンファイルの作成に失敗しました: %w", err)
+		return fmt.Errorf("failed to create token file: %w", err)
 	}
 	defer f.Close()
 
@@ -153,7 +153,7 @@ func authenticateViaBrowser(ctx context.Context, config *oauth2.Config) (*oauth2
 	// Find an available port
 	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
-		return nil, fmt.Errorf("ローカルサーバーの起動に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to start local server: %w", err)
 	}
 	port := listener.Addr().(*net.TCPAddr).Port
 	listener.Close()
@@ -170,12 +170,12 @@ func authenticateViaBrowser(ctx context.Context, config *oauth2.Config) (*oauth2
 	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 		code := r.URL.Query().Get("code")
 		if code == "" {
-			errCh <- fmt.Errorf("認証コードを取得できませんでした")
-			fmt.Fprintf(w, "<html><body><h1>認証失敗</h1><p>ウィンドウを閉じてください。</p></body></html>")
+			errCh <- fmt.Errorf("failed to get authorization code")
+			fmt.Fprintf(w, "<html><body><h1>Authentication Failed</h1><p>You can close this window.</p></body></html>")
 			return
 		}
 		codeCh <- code
-		fmt.Fprintf(w, "<html><body><h1>認証成功!</h1><p>このウィンドウを閉じてください。</p></body></html>")
+		fmt.Fprintf(w, "<html><body><h1>Authentication Successful!</h1><p>You can close this window.</p></body></html>")
 	})
 	server := &http.Server{
 		Addr:    fmt.Sprintf("localhost:%d", port),
@@ -190,9 +190,9 @@ func authenticateViaBrowser(ctx context.Context, config *oauth2.Config) (*oauth2
 
 	// Generate auth URL and open browser
 	authURL := config.AuthCodeURL("state", oauth2.AccessTypeOffline)
-	fmt.Println("ブラウザで認証してください...")
+	fmt.Println("Please authenticate in your browser...")
 	if err := openBrowser(authURL); err != nil {
-		fmt.Printf("ブラウザを開けませんでした。以下のURLを手動で開いてください:\n%s\n", authURL)
+		fmt.Printf("Could not open browser. Please open the following URL manually:\n%s\n", authURL)
 	}
 
 	// Wait for auth code
@@ -212,7 +212,7 @@ func authenticateViaBrowser(ctx context.Context, config *oauth2.Config) (*oauth2
 	// Exchange auth code for token
 	token, err := config.Exchange(ctx, authCode)
 	if err != nil {
-		return nil, fmt.Errorf("トークンの取得に失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to get token: %w", err)
 	}
 
 	return token, nil

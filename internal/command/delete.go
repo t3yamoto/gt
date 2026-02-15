@@ -11,13 +11,13 @@ import (
 func DeleteCommand() *cli.Command {
 	return &cli.Command{
 		Name:      "delete",
-		Usage:     "タスクを削除（引数なしでインタラクティブ選択）",
+		Usage:     "Delete a task (interactive selection if no argument)",
 		ArgsUsage: "[task-id]",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "tasklist",
 				Aliases: []string{"l"},
-				Usage:   "対象タスクリスト名（省略時は全リスト）",
+				Usage:   "Target task list name (default: all lists)",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -79,7 +79,7 @@ func DeleteCommand() *cli.Command {
 				return err
 			}
 
-			fmt.Printf("タスクを削除しました: %s\n", task.Title)
+			fmt.Printf("Task deleted: %s\n", task.Title)
 			return nil
 		},
 	}

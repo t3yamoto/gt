@@ -78,7 +78,7 @@ func ParseMarkdown(content string) (*TaskMarkdown, error) {
 
 	// Check for front matter
 	if !strings.HasPrefix(content, "---") {
-		return nil, fmt.Errorf("front matter が見つかりません。--- で始めてください")
+		return nil, fmt.Errorf("front matter not found, please start with ---")
 	}
 
 	// Find the end of front matter
@@ -87,7 +87,7 @@ func ParseMarkdown(content string) (*TaskMarkdown, error) {
 
 	endIdx := strings.Index(rest, "---")
 	if endIdx == -1 {
-		return nil, fmt.Errorf("front matter の終了 (---) が見つかりません")
+		return nil, fmt.Errorf("front matter end (---) not found")
 	}
 
 	frontMatterStr := strings.TrimSpace(rest[:endIdx])
@@ -96,11 +96,11 @@ func ParseMarkdown(content string) (*TaskMarkdown, error) {
 	// Parse front matter YAML
 	var fm TaskFrontMatter
 	if err := yaml.Unmarshal([]byte(frontMatterStr), &fm); err != nil {
-		return nil, fmt.Errorf("front matter のパースに失敗しました: %w", err)
+		return nil, fmt.Errorf("failed to parse front matter: %w", err)
 	}
 
 	if fm.Title == "" {
-		return nil, fmt.Errorf("title は必須です")
+		return nil, fmt.Errorf("title is required")
 	}
 
 	return &TaskMarkdown{

@@ -11,14 +11,14 @@ import (
 func AddCommand() *cli.Command {
 	return &cli.Command{
 		Name:      "add",
-		Usage:     "タスクを追加（引数なしでエディタ起動）",
+		Usage:     "Add a task (opens editor if no argument)",
 		ArgsUsage: "[title]",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "tasklist",
 				Aliases: []string{"l"},
 				Value:   "@default",
-				Usage:   "対象タスクリスト名",
+				Usage:   "Target task list name",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -56,7 +56,7 @@ func AddCommand() *cli.Command {
 				}
 
 				if editor.IsEmpty(editedContent) {
-					fmt.Println("キャンセルされました。")
+					fmt.Println("Cancelled.")
 					return nil
 				}
 
@@ -83,7 +83,7 @@ func AddCommand() *cli.Command {
 				return err
 			}
 
-			fmt.Printf("タスクを追加しました: %s (ID: %s)\n", created.Title, client.ShortID(created.ID))
+			fmt.Printf("Task added: %s (ID: %s)\n", created.Title, client.ShortID(created.ID))
 			return nil
 		},
 	}
