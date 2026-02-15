@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/mattn/go-runewidth"
 	"github.com/t3yamoto/gt/internal/client"
 )
 
@@ -22,10 +23,10 @@ func PrintTasksTable(w io.Writer, tasks []*client.Task) {
 	statusWidth := 6
 
 	// Print header
-	fmt.Fprintf(w, "%-*s  %-*s  %-*s  %s\n",
-		idWidth, "ID",
-		titleWidth, "TITLE",
-		dueWidth, "DUE",
+	fmt.Fprintf(w, "%s  %s  %s  %s\n",
+		padRight("ID", idWidth),
+		padRight("TITLE", titleWidth),
+		padRight("DUE", dueWidth),
 		"STATUS")
 	fmt.Fprintln(w, strings.Repeat("-", idWidth+titleWidth+dueWidth+statusWidth+8))
 
@@ -41,21 +42,31 @@ func PrintTasksTable(w io.Writer, tasks []*client.Task) {
 			status = "[x]"
 		}
 
-		fmt.Fprintf(w, "%-*s  %-*s  %-*s  %s\n",
-			idWidth, client.ShortID(t.ID),
-			titleWidth, title,
-			dueWidth, due,
+		fmt.Fprintf(w, "%s  %s  %s  %s\n",
+			padRight(client.ShortID(t.ID), idWidth),
+			padRight(title, titleWidth),
+			padRight(due, dueWidth),
 			status)
 	}
 }
 
-// truncate truncates a string to the specified width, adding "..." if necessary
+// padRight pads a string to the specified display width
+func padRight(s string, width int) string {
+	w := runewidth.StringWidth(s)
+	if w >= width {
+		return s
+	}
+	return s + strings.Repeat(" ", width-w)
+}
+
+// truncate truncates a string to the specified display width, adding "..." if necessary
 func truncate(s string, width int) string {
-	if len(s) <= width {
+	w := runewidth.StringWidth(s)
+	if w <= width {
 		return s
 	}
 	if width <= 3 {
-		return s[:width]
+		return runewidth.Truncate(s, width, "")
 	}
-	return s[:width-3] + "..."
+	return runewidth.Truncate(s, width, "...")
 }
