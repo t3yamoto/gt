@@ -28,20 +28,11 @@ func GenerateMarkdown(task *client.Task, taskListName string) string {
 
 	sb.WriteString("---\n")
 	sb.WriteString(fmt.Sprintf("title: %s\n", task.Title))
-	if task.Due != "" {
-		sb.WriteString(fmt.Sprintf("due: %s\n", task.Due))
-	}
-	if taskListName != "" && taskListName != "@default" {
-		sb.WriteString(fmt.Sprintf("tasklist: %s\n", taskListName))
-	}
-	if task.Status == "completed" {
-		sb.WriteString("done: true\n")
-	}
+	sb.WriteString(fmt.Sprintf("due: %s\n", task.Due))
+	sb.WriteString(fmt.Sprintf("tasklist: %s\n", taskListName))
+	sb.WriteString(fmt.Sprintf("done: %t\n", task.Status == "completed"))
 	sb.WriteString("---\n\n")
-
-	if task.Notes != "" {
-		sb.WriteString(task.Notes)
-	}
+	sb.WriteString(task.Notes)
 
 	return sb.String()
 }
@@ -53,9 +44,8 @@ func GenerateEmptyMarkdown(taskListName string) string {
 	sb.WriteString("---\n")
 	sb.WriteString("title: \n")
 	sb.WriteString("due: \n")
-	if taskListName != "" && taskListName != "@default" {
-		sb.WriteString(fmt.Sprintf("tasklist: %s\n", taskListName))
-	}
+	sb.WriteString(fmt.Sprintf("tasklist: %s\n", taskListName))
+	sb.WriteString("done: false\n")
 	sb.WriteString("---\n\n")
 
 	return sb.String()

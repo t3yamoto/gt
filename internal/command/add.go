@@ -36,6 +36,9 @@ func AddCommand() *cli.Command {
 				return err
 			}
 
+			// Get actual task list name for display
+			displayName, _ := taskClient.GetTaskListName(ctx, taskListID)
+
 			var newTask *client.Task
 
 			if c.Args().Len() > 0 {
@@ -46,7 +49,7 @@ func AddCommand() *cli.Command {
 				}
 			} else {
 				// Editor mode
-				initialContent := editor.GenerateEmptyMarkdown(taskListName)
+				initialContent := editor.GenerateEmptyMarkdown(displayName)
 				editedContent, err := editor.Open(initialContent)
 				if err != nil {
 					return err
@@ -64,7 +67,7 @@ func AddCommand() *cli.Command {
 
 				// If task list was changed in editor, resolve new task list
 				editorTaskList := parsed.GetTaskListName()
-				if editorTaskList != taskListName && editorTaskList != "@default" {
+				if editorTaskList != displayName && editorTaskList != "@default" {
 					taskListID, err = taskClient.ResolveTaskListID(ctx, editorTaskList)
 					if err != nil {
 						return err
