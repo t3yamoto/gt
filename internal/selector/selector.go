@@ -24,12 +24,14 @@ func SelectTask(tasks []*client.Task) (*client.Task, error) {
 	}
 
 	// Build input for fzf
-	// Format: index<TAB>title<TAB>preview_base64
+	// Format: index<TAB>display<TAB>preview_base64
+	// Display format: [LIST] TITLE
 	var input strings.Builder
 	for i, t := range tasks {
 		preview := editor.GenerateMarkdown(t, t.TaskListName)
 		previewB64 := base64.StdEncoding.EncodeToString([]byte(preview))
-		input.WriteString(fmt.Sprintf("%d\t%s\t%s\n", i, t.Title, previewB64))
+		display := fmt.Sprintf("[%s] %s", t.TaskListName, t.Title)
+		input.WriteString(fmt.Sprintf("%d\t%s\t%s\n", i, display, previewB64))
 	}
 
 	// Run fzf with shell

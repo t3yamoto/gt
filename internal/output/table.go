@@ -18,22 +18,22 @@ func PrintTasksTable(w io.Writer, tasks []*client.Task) {
 
 	// Calculate column widths
 	idWidth := 8
-	titleWidth := 24
-	listWidth := 12
+	listWidth := 16
+	titleWidth := 32
 	dueWidth := 10
 
 	// Print header
 	fmt.Fprintf(w, "%s  %s  %s  %s\n",
 		padRight("ID", idWidth),
-		padRight("TITLE", titleWidth),
 		padRight("LIST", listWidth),
+		padRight("TITLE", titleWidth),
 		"DUE")
-	fmt.Fprintln(w, strings.Repeat("-", idWidth+titleWidth+listWidth+dueWidth+6))
+	fmt.Fprintln(w, strings.Repeat("-", idWidth+listWidth+titleWidth+dueWidth+6))
 
 	// Print tasks
 	for _, t := range tasks {
-		title := truncate(t.Title, titleWidth)
 		list := truncate(t.TaskListName, listWidth)
+		title := truncate(t.Title, titleWidth)
 		due := t.Due
 		if due == "" {
 			due = "-"
@@ -41,8 +41,8 @@ func PrintTasksTable(w io.Writer, tasks []*client.Task) {
 
 		fmt.Fprintf(w, "%s  %s  %s  %s\n",
 			padRight(client.ShortID(t.ID), idWidth),
-			padRight(title, titleWidth),
 			padRight(list, listWidth),
+			padRight(title, titleWidth),
 			due)
 	}
 }
