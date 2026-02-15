@@ -86,8 +86,8 @@ func (c *Client) GetTaskLists(ctx context.Context) ([]*TaskList, error) {
 // ResolveTaskListID resolves a task list name to its ID
 // @default returns the default task list
 func (c *Client) ResolveTaskListID(ctx context.Context, name string) (string, error) {
-	if name == "@default" || name == "" {
-		return "@default", nil
+	if name == DefaultTaskList || name == "" {
+		return DefaultTaskList, nil
 	}
 
 	lists, err := c.GetTaskLists(ctx)
@@ -117,10 +117,10 @@ func (c *Client) GetTaskListName(ctx context.Context, id string) (string, error)
 		}
 	}
 
-	if id == "@default" {
-		tl, err := c.service.Tasklists.Get("@default").Context(ctx).Do()
+	if id == DefaultTaskList {
+		tl, err := c.service.Tasklists.Get(DefaultTaskList).Context(ctx).Do()
 		if err != nil {
-			return "@default", nil
+			return DefaultTaskList, nil
 		}
 		return tl.Title, nil
 	}
@@ -139,15 +139,7 @@ func (c *Client) ListAllTasks(ctx context.Context) ([]*Task, error) {
 		if cached := c.cache.Load(); cached != nil && len(cached.Tasks) > 0 {
 			var tasks []*Task
 			for _, t := range cached.Tasks {
-				tasks = append(tasks, &Task{
-					ID:           t.ID,
-					Title:        t.Title,
-					Notes:        t.Notes,
-					Due:          t.Due,
-					Status:       t.Status,
-					TaskListID:   t.TaskListID,
-					TaskListName: t.TaskListName,
-				})
+				tasks = append(tasks, taskFromCache(t))
 			}
 			return tasks, nil
 		}
@@ -219,15 +211,7 @@ func (c *Client) FindTask(ctx context.Context, taskID string) (*Task, error) {
 		if cached := c.cache.Load(); cached != nil {
 			for _, t := range cached.Tasks {
 				if t.ID == taskID || strings.HasPrefix(t.ID, taskID) {
-					return &Task{
-						ID:           t.ID,
-						Title:        t.Title,
-						Notes:        t.Notes,
-						Due:          t.Due,
-						Status:       t.Status,
-						TaskListID:   t.TaskListID,
-						TaskListName: t.TaskListName,
-					}, nil
+					return taskFromCache(t), nil
 				}
 			}
 		}
@@ -255,10 +239,10 @@ func (c *Client) CreateTask(ctx context.Context, taskListID string, task *Task) 
 		Notes: task.Notes,
 	}
 	if task.Due != "" {
-		newTask.Due = task.Due + "T00:00:00.000Z"
+		newTask.Due = FormatDueDate(task.Due)
 	}
-	if task.Status == "completed" {
-		newTask.Status = "completed"
+	if task.Status == StatusCompleted {
+		newTask.Status = StatusCompleted
 	}
 
 	t, err := c.service.Tasks.Insert(taskListID, newTask).Context(ctx).Do()
@@ -291,15 +275,11 @@ func (c *Client) UpdateTask(ctx context.Context, taskListID string, task *Task) 
 	// Update fields
 	existing.Title = task.Title
 	existing.Notes = task.Notes
-	if task.Due != "" {
-		existing.Due = task.Due + "T00:00:00.000Z"
+	existing.Due = FormatDueDate(task.Due)
+	if task.Status == StatusCompleted {
+		existing.Status = StatusCompleted
 	} else {
-		existing.Due = ""
-	}
-	if task.Status == "completed" {
-		existing.Status = "completed"
-	} else {
-		existing.Status = "needsAction"
+		existing.Status = StatusNeedsAction
 	}
 
 	t, err := c.service.Tasks.Update(taskListID, fullID, existing).Context(ctx).Do()
@@ -311,7 +291,7 @@ func (c *Client) UpdateTask(ctx context.Context, taskListID string, task *Task) 
 	updated := convertTask(t, taskListID, listName)
 
 	// Update cache (remove if completed, update otherwise)
-	if updated.Status == "completed" {
+	if updated.Status == StatusCompleted {
 		c.removeTaskFromCache(updated.ID)
 	} else {
 		c.updateTaskInCache(updated)
@@ -332,7 +312,7 @@ func (c *Client) CompleteTask(ctx context.Context, taskListID, taskID string) (*
 		return nil, fmt.Errorf("failed to get task: %w", err)
 	}
 
-	existing.Status = "completed"
+	existing.Status = StatusCompleted
 	t, err := c.service.Tasks.Update(taskListID, fullID, existing).Context(ctx).Do()
 	if err != nil {
 		return nil, fmt.Errorf("failed to complete task: %w", err)
@@ -431,15 +411,7 @@ func (c *Client) saveToCache(lists []*TaskList, tasks []*Task) {
 	}
 
 	for _, t := range tasks {
-		data.Tasks = append(data.Tasks, cache.TaskCache{
-			ID:           t.ID,
-			Title:        t.Title,
-			Notes:        t.Notes,
-			Due:          t.Due,
-			Status:       t.Status,
-			TaskListID:   t.TaskListID,
-			TaskListName: t.TaskListName,
-		})
+		data.Tasks = append(data.Tasks, taskToCache(t))
 	}
 
 	c.cache.Save(data)
@@ -450,15 +422,7 @@ func (c *Client) addTaskToCache(task *Task) {
 	if c.cache == nil {
 		return
 	}
-	c.cache.AddTask(cache.TaskCache{
-		ID:           task.ID,
-		Title:        task.Title,
-		Notes:        task.Notes,
-		Due:          task.Due,
-		Status:       task.Status,
-		TaskListID:   task.TaskListID,
-		TaskListName: task.TaskListName,
-	})
+	c.cache.AddTask(taskToCache(task))
 }
 
 // updateTaskInCache updates a task in the cache
@@ -466,15 +430,7 @@ func (c *Client) updateTaskInCache(task *Task) {
 	if c.cache == nil {
 		return
 	}
-	c.cache.UpdateTask(cache.TaskCache{
-		ID:           task.ID,
-		Title:        task.Title,
-		Notes:        task.Notes,
-		Due:          task.Due,
-		Status:       task.Status,
-		TaskListID:   task.TaskListID,
-		TaskListName: task.TaskListName,
-	})
+	c.cache.UpdateTask(taskToCache(task))
 }
 
 // removeTaskFromCache removes a task from the cache
@@ -485,15 +441,33 @@ func (c *Client) removeTaskFromCache(taskID string) {
 	c.cache.RemoveTask(taskID)
 }
 
-func convertTask(t *tasks.Task, taskListID, taskListName string) *Task {
-	due := ""
-	if t.Due != "" {
-		// Extract date part only
-		if len(t.Due) >= 10 {
-			due = t.Due[:10]
-		}
+// taskFromCache converts a cache.TaskCache to a Task
+func taskFromCache(c cache.TaskCache) *Task {
+	return &Task{
+		ID:           c.ID,
+		Title:        c.Title,
+		Notes:        c.Notes,
+		Due:          c.Due,
+		Status:       c.Status,
+		TaskListID:   c.TaskListID,
+		TaskListName: c.TaskListName,
 	}
+}
 
+// taskToCache converts a Task to a cache.TaskCache
+func taskToCache(t *Task) cache.TaskCache {
+	return cache.TaskCache{
+		ID:           t.ID,
+		Title:        t.Title,
+		Notes:        t.Notes,
+		Due:          t.Due,
+		Status:       t.Status,
+		TaskListID:   t.TaskListID,
+		TaskListName: t.TaskListName,
+	}
+}
+
+func convertTask(t *tasks.Task, taskListID, taskListName string) *Task {
 	completed := ""
 	if t.Completed != nil {
 		completed = *t.Completed
@@ -503,7 +477,7 @@ func convertTask(t *tasks.Task, taskListID, taskListName string) *Task {
 		ID:           t.Id,
 		Title:        t.Title,
 		Notes:        t.Notes,
-		Due:          due,
+		Due:          ParseDueDate(t.Due),
 		Status:       t.Status,
 		Completed:    completed,
 		TaskListID:   taskListID,

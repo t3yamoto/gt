@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/t3yamoto/gt/internal/client"
-	"github.com/t3yamoto/gt/internal/selector"
 	"github.com/urfave/cli/v2"
 )
 
@@ -28,52 +27,12 @@ func DoneCommand() *cli.Command {
 				return err
 			}
 
-			var taskID string
-			var taskListID string
-
-			if c.Args().Len() > 0 {
-				// Direct mode: use provided task ID
-				taskID = c.Args().First()
-				if c.String("tasklist") != "" {
-					taskListID, err = taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
-					if err != nil {
-						return err
-					}
-				} else {
-					// Search across all task lists
-					task, err := taskClient.FindTask(ctx, taskID)
-					if err != nil {
-						return err
-					}
-					taskID = task.ID
-					taskListID = task.TaskListID
-				}
-			} else {
-				// Interactive mode
-				var tasks []*client.Task
-				if c.String("tasklist") != "" {
-					taskListID, err = taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
-					if err != nil {
-						return err
-					}
-					tasks, err = taskClient.ListTasks(ctx, taskListID)
-				} else {
-					tasks, err = taskClient.ListAllTasks(ctx)
-				}
-				if err != nil {
-					return err
-				}
-
-				selected, err := selector.SelectTask(tasks)
-				if err != nil {
-					return err
-				}
-				taskID = selected.ID
-				taskListID = selected.TaskListID
+			task, taskListID, err := ResolveTask(ctx, taskClient, c.Args().First(), c.String("tasklist"))
+			if err != nil {
+				return err
 			}
 
-			// Complete the task
-			completed, err := taskClient.CompleteTask(ctx, taskListID, taskID)
+			completed, err := taskClient.CompleteTask(ctx, taskListID, task.ID)
 			if err != nil {
 				return err
 			}

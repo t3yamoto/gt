@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/t3yamoto/gt/internal/client"
-	"github.com/t3yamoto/gt/internal/selector"
 	"github.com/urfave/cli/v2"
 )
 
@@ -28,53 +27,11 @@ func DeleteCommand() *cli.Command {
 				return err
 			}
 
-			var task *client.Task
-			var taskListID string
-
-			if c.Args().Len() > 0 {
-				// Direct mode: use provided task ID
-				taskID := c.Args().First()
-				if c.String("tasklist") != "" {
-					taskListID, err = taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
-					if err != nil {
-						return err
-					}
-					task, err = taskClient.GetTask(ctx, taskListID, taskID)
-					if err != nil {
-						return err
-					}
-				} else {
-					// Search across all task lists
-					task, err = taskClient.FindTask(ctx, taskID)
-					if err != nil {
-						return err
-					}
-					taskListID = task.TaskListID
-				}
-			} else {
-				// Interactive mode
-				var tasks []*client.Task
-				if c.String("tasklist") != "" {
-					taskListID, err = taskClient.ResolveTaskListID(ctx, c.String("tasklist"))
-					if err != nil {
-						return err
-					}
-					tasks, err = taskClient.ListTasks(ctx, taskListID)
-				} else {
-					tasks, err = taskClient.ListAllTasks(ctx)
-				}
-				if err != nil {
-					return err
-				}
-
-				task, err = selector.SelectTask(tasks)
-				if err != nil {
-					return err
-				}
-				taskListID = task.TaskListID
+			task, taskListID, err := ResolveTask(ctx, taskClient, c.Args().First(), c.String("tasklist"))
+			if err != nil {
+				return err
 			}
 
-			// Delete the task
 			if err := taskClient.DeleteTask(ctx, taskListID, task.ID); err != nil {
 				return err
 			}

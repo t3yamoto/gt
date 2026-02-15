@@ -17,7 +17,7 @@ func AddCommand() *cli.Command {
 			&cli.StringFlag{
 				Name:    "tasklist",
 				Aliases: []string{"l"},
-				Value:   "@default",
+				Value:   client.DefaultTaskList,
 				Usage:   "Target task list name",
 			},
 		},
@@ -67,7 +67,7 @@ func AddCommand() *cli.Command {
 
 				// If task list was changed in editor, resolve new task list
 				editorTaskList := parsed.GetTaskListName()
-				if editorTaskList != displayName && editorTaskList != "@default" {
+				if editorTaskList != displayName && editorTaskList != client.DefaultTaskList {
 					taskListID, err = taskClient.ResolveTaskListID(ctx, editorTaskList)
 					if err != nil {
 						return err

@@ -48,7 +48,7 @@ func GenerateMarkdown(task *client.Task, taskListName string) string {
 		Title:    task.Title,
 		Due:      task.Due,
 		TaskList: taskListName,
-		Done:     task.Status == "completed",
+		Done:     task.Status == client.StatusCompleted,
 		Notes:    task.Notes,
 	}
 
@@ -111,9 +111,9 @@ func ParseMarkdown(content string) (*TaskMarkdown, error) {
 
 // ToTask converts TaskMarkdown to a Task
 func (tm *TaskMarkdown) ToTask() *client.Task {
-	status := "needsAction"
+	status := client.StatusNeedsAction
 	if tm.FrontMatter.Done {
-		status = "completed"
+		status = client.StatusCompleted
 	}
 
 	return &client.Task{
@@ -130,5 +130,5 @@ func (tm *TaskMarkdown) GetTaskListName() string {
 	if tm.FrontMatter.TaskList != "" {
 		return tm.FrontMatter.TaskList
 	}
-	return "@default"
+	return client.DefaultTaskList
 }
