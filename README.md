@@ -90,7 +90,7 @@ gt add -l "Shopping" "Buy milk"
 title: Task title
 due: 2024-02-20
 tasklist: My List
-done: false
+completed: false
 ---
 
 Notes go here.

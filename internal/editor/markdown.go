@@ -12,10 +12,10 @@ import (
 
 // TaskFrontMatter represents the YAML front matter for a task
 type TaskFrontMatter struct {
-	Title    string `yaml:"title"`
-	Due      string `yaml:"due,omitempty"`
-	TaskList string `yaml:"tasklist,omitempty"`
-	Done     bool   `yaml:"done,omitempty"`
+	Title     string `yaml:"title"`
+	Due       string `yaml:"due,omitempty"`
+	TaskList  string `yaml:"tasklist,omitempty"`
+	Completed bool   `yaml:"completed,omitempty"`
 }
 
 // TaskMarkdown represents a parsed task markdown document
@@ -26,18 +26,18 @@ type TaskMarkdown struct {
 
 // templateData holds data for the markdown template
 type templateData struct {
-	Title    string
-	Due      string
-	TaskList string
-	Done     bool
-	Notes    string
+	Title     string
+	Due       string
+	TaskList  string
+	Completed bool
+	Notes     string
 }
 
 var taskTemplate = template.Must(template.New("task").Parse(`---
 title: {{.Title}}
 due: {{.Due}}
 tasklist: {{.TaskList}}
-done: {{.Done}}
+completed: {{.Completed}}
 ---
 
 {{.Notes}}`))
@@ -45,11 +45,11 @@ done: {{.Done}}
 // GenerateMarkdown creates a markdown document from a task
 func GenerateMarkdown(task *client.Task, taskListName string) string {
 	data := templateData{
-		Title:    task.Title,
-		Due:      task.Due,
-		TaskList: taskListName,
-		Done:     task.Status == client.StatusCompleted,
-		Notes:    task.Notes,
+		Title:     task.Title,
+		Due:       task.Due,
+		TaskList:  taskListName,
+		Completed: task.Status == client.StatusCompleted,
+		Notes:     task.Notes,
 	}
 
 	var buf bytes.Buffer
@@ -60,11 +60,11 @@ func GenerateMarkdown(task *client.Task, taskListName string) string {
 // GenerateEmptyMarkdown creates an empty markdown template
 func GenerateEmptyMarkdown(taskListName string) string {
 	data := templateData{
-		Title:    "",
-		Due:      "",
-		TaskList: taskListName,
-		Done:     false,
-		Notes:    "",
+		Title:     "",
+		Due:       "",
+		TaskList:  taskListName,
+		Completed: false,
+		Notes:     "",
 	}
 
 	var buf bytes.Buffer
@@ -112,7 +112,7 @@ func ParseMarkdown(content string) (*TaskMarkdown, error) {
 // ToTask converts TaskMarkdown to a Task
 func (tm *TaskMarkdown) ToTask() *client.Task {
 	status := client.StatusNeedsAction
-	if tm.FrontMatter.Done {
+	if tm.FrontMatter.Completed {
 		status = client.StatusCompleted
 	}
 
