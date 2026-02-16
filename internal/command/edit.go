@@ -40,6 +40,12 @@ func EditCommand() *cli.Command {
 				return err
 			}
 
+			// Check if content was changed
+			if initialContent == editedContent {
+				fmt.Println("No changes made.")
+				return nil
+			}
+
 			// Parse edited content
 			parsed, err := editor.ParseMarkdown(editedContent)
 			if err != nil {
